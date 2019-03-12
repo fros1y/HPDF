@@ -348,12 +348,12 @@ createPDFRawImageFromByteString :: Int -- ^ Width
                                 -> PDF (PDFReference RawImage)
 createPDFRawImageFromByteString width height interpolate pdfFilter stream = createPDFRawImageFromByteString' width height bpc colorSpace interpolate pdfFilter stream where
   bpc = 8
-  colorSpace = PDFName "DeviceRGB"
+  colorSpace = "DeviceRGB"
 
 createPDFRawImageFromByteString' :: Int -- ^ Width
                                 -> Int -- ^ Height
                                 -> Int -- ^ Bits per component
-                                -> PDFName
+                                -> String
                                 -> Bool -- ^ Interpolation
                                 -> PDFFilter -- ^ Decompression filter to be sued by the PDF reader to render the picture
                                 -> B.ByteString -- ^ RGB pixels
@@ -380,7 +380,7 @@ createPDFRawImageFromByteString' width height bpc colorSpace interpolate pdfFilt
                                                    , (PDFName "Width",AnyPdfObject . PDFInteger $ width)
                                                    , (PDFName "Height",AnyPdfObject . PDFInteger $ height)
                                                    , (PDFName "BitsPerComponent",AnyPdfObject . PDFInteger $ bpc)
-                                                   , (PDFName "ColorSpace",AnyPdfObject $ colorSpace)
+                                                   , (PDFName "ColorSpace",AnyPdfObject $ PDFName colorSpace)
                                                    , (PDFName "Interpolate", AnyPdfObject interpolate)
                                                    ] ++ getFilter
                                              }
