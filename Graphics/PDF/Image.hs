@@ -29,6 +29,7 @@ module Graphics.PDF.Image(
    , readJpegDataURL
    , createPDFRawImageFromARGB
    , createPDFRawImageFromByteString
+   , createPDFRawImageFromByteString'
  ) where
      
 import Graphics.PDF.LowLevel.Types
@@ -338,14 +339,26 @@ createPDFJpeg (JpegFile bits_per_component width height color_space img) = do
                                                    ] ++ color color_space
                                              }
                     tell img        
-        
+
 createPDFRawImageFromByteString :: Int -- ^ Width
                                 -> Int -- ^ Height
                                 -> Bool -- ^ Interpolation
                                 -> PDFFilter -- ^ Decompression filter to be sued by the PDF reader to render the picture
                                 -> B.ByteString -- ^ RGB pixels
+                                -> PDF (PDFReference RawImage)
+createPDFRawImageFromByteString width height interpolate pdfFilter stream = createPDFRawImageFromByteString' width height bpc colorSpace interpolate pdfFilter stream where
+  bpc = 8
+  colorSpace = PDFName "DeviceRGB"
+
+createPDFRawImageFromByteString' :: Int -- ^ Width
+                                -> Int -- ^ Height
+                                -> Int -- ^ Bits per component
+                                -> PDFName
+                                -> Bool -- ^ Interpolation
+                                -> PDFFilter -- ^ Decompression filter to be sued by the PDF reader to render the picture
+                                -> B.ByteString -- ^ RGB pixels
                                 -> PDF (PDFReference RawImage)  
-createPDFRawImageFromByteString width height interpolate pdfFilter stream =  do
+createPDFRawImageFromByteString' width height bpc colorSpace interpolate pdfFilter stream =  do
         PDFReference s <- createContent a' Nothing  
         recordBound s (fromIntegral width) (fromIntegral height)
         return (PDFReference s) 
@@ -366,8 +379,8 @@ createPDFRawImageFromByteString width height interpolate pdfFilter stream =  do
                                                    , (PDFName "Subtype",AnyPdfObject . PDFName $ "Image")
                                                    , (PDFName "Width",AnyPdfObject . PDFInteger $ width)
                                                    , (PDFName "Height",AnyPdfObject . PDFInteger $ height)
-                                                   , (PDFName "BitsPerComponent",AnyPdfObject . PDFInteger $ 8)
-                                                   , (PDFName "ColorSpace",AnyPdfObject $ PDFName "DeviceRGB")
+                                                   , (PDFName "BitsPerComponent",AnyPdfObject . PDFInteger $ bpc)
+                                                   , (PDFName "ColorSpace",AnyPdfObject $ colorSpace)
                                                    , (PDFName "Interpolate", AnyPdfObject interpolate)
                                                    ] ++ getFilter
                                              }
