@@ -22,14 +22,14 @@ module Graphics.PDF.Annotation(
    , toAsciiString
  ) where
 
-import Graphics.PDF.LowLevel.Types
-import Graphics.PDF.Draw
-import qualified Data.Map as M
-import Graphics.PDF.Action
-import Graphics.PDF.Pages
-import Control.Monad.State(gets)
-import qualified Data.Text as T
-import Network.URI 
+import           Control.Monad.State         (gets)
+import qualified Data.Map                    as M
+import qualified Data.Text                   as T
+import           Graphics.PDF.Action
+import           Graphics.PDF.Draw
+import           Graphics.PDF.LowLevel.Types
+import           Graphics.PDF.Pages
+import           Network.URI
 
 --import Debug.Trace
 
@@ -41,25 +41,25 @@ data TextIcon = Note
               | Help
               | Insert
               deriving(Eq,Show)
-    
-                  
-data TextAnnotation = TextAnnotation 
+
+
+data TextAnnotation = TextAnnotation
    T.Text -- Content
    [PDFFloat] -- Rect
    TextIcon
-data URLLink = URLLink 
+data URLLink = URLLink
   T.Text -- Content
   [PDFFloat] -- Rect
   URI -- URL
   Bool -- Border
-data PDFLink = PDFLink 
+data PDFLink = PDFLink
   T.Text -- Content
   [PDFFloat] -- Rect
   (PDFReference PDFPage) -- Page
   PDFFloat -- x
   PDFFloat -- y
   Bool -- Border
---data Screen = Screen (PDFReference Rendition) PDFString [PDFFloat] (PDFReference PDFPage) (Maybe (PDFReference ControlMedia)) (Maybe (PDFReference ControlMedia)) 
+--data Screen = Screen (PDFReference Rendition) PDFString [PDFFloat] (PDFReference PDFPage) (Maybe (PDFReference ControlMedia)) (Maybe (PDFReference ControlMedia))
 
 --det :: Matrix -> PDFFloat
 --det (Matrix a b c d _ _) = a*d - b*c
@@ -68,9 +68,9 @@ data PDFLink = PDFLink
 --inverse m@(Matrix a b c d e f) = (Matrix (d/de) (-b/de) (-c/de) (a/de) 0 0) * (Matrix 1 0 0 1 (-e) (-f))
 --	where
 --		de = det m
-		
+
 applyMatrixToRectangle :: Matrix -> [PDFFloat] -> [PDFFloat]
-applyMatrixToRectangle m [xa,ya,xb,yb] = 
+applyMatrixToRectangle m [xa,ya,xb,yb] =
     let (xa',ya') = m `applyTo` (xa,ya)
         (xa'',yb') = m `applyTo` (xa,yb)
         (xb',ya'') = m `applyTo` (xb,ya)
@@ -83,15 +83,15 @@ applyMatrixToRectangle m [xa,ya,xb,yb] =
     [x1,y1,x2,y2]
  where
      applyTo (Matrix a b c d e f) (x,y) = (a*x+c*y+e,b*x+d*y+f)
-     
+
 applyMatrixToRectangle _ a = a
 
-    
+
 
 -- | Get the border shqpe depending on the style
 getBorder :: Bool -> [PDFInteger]
 getBorder False = [0,0,0]
-getBorder True = [0,0,1]
+getBorder True  = [0,0,1]
 
 standardAnnotationDict :: AnnotationObject a => a -> [(PDFName,AnyPdfObject)]
 standardAnnotationDict a = [(PDFName "Type",AnyPdfObject . PDFName $ "Annot")
@@ -101,7 +101,7 @@ standardAnnotationDict a = [(PDFName "Type",AnyPdfObject . PDFName $ "Annot")
                          ]
 
 --instance PdfObject Screen where
---   toPDF a@(Screen _ _ _ p play stop) = toPDF . PDFDictionary . M.fromList $ 
+--   toPDF a@(Screen _ _ _ p play stop) = toPDF . PDFDictionary . M.fromList $
 --        standardAnnotationDict a ++ [(PDFName "P",AnyPdfObject p)]
 --                                    ++ (maybe [] (\x -> [(PDFName "A",AnyPdfObject x)]) play)
 --                                    ++ (maybe [] (\x -> [(PDFName "AA",AnyPdfObject $ otherActions x)]) stop)
@@ -118,9 +118,9 @@ standardAnnotationDict a = [(PDFName "Type",AnyPdfObject . PDFName $ "Annot")
 --  annotationType _ = PDFName "Screen"
 --  annotationContent (Screen _ s _ _ _ _) = s
 --  annotationRect (Screen _ _ r _ _ _) = r
-                             
+
 instance PdfObject TextAnnotation where
-      toPDF a@(TextAnnotation _ _ i) = toPDF . PDFDictionary . M.fromList $ 
+      toPDF a@(TextAnnotation _ _ i) = toPDF . PDFDictionary . M.fromList $
            standardAnnotationDict a ++ [(PDFName "Name",AnyPdfObject . PDFName $ show i)]
 
 instance PdfLengthInfo TextAnnotation where
@@ -133,16 +133,16 @@ instance AnnotationObject TextAnnotation where
     annotationToGlobalCoordinates (TextAnnotation a r b) = do
         gr <- transformAnnotRect r
         return $ TextAnnotation a gr b
-    
+
 instance PdfObject URLLink where
-    toPDF a@(URLLink _ _ url border) = toPDF . PDFDictionary . M.fromList $ 
-           standardAnnotationDict a ++ 
+    toPDF a@(URLLink _ _ url border) = toPDF . PDFDictionary . M.fromList $
+           standardAnnotationDict a ++
             [ (PDFName "A",AnyPdfObject (GoToURL url))
             , (PDFName "Border",AnyPdfObject . map AnyPdfObject $ (getBorder border))
             ]
 
 instance PdfLengthInfo URLLink where
-           
+
 instance AnnotationObject URLLink where
     addAnnotation = addObject
     annotationType _ = PDFName "Link"
@@ -151,10 +151,10 @@ instance AnnotationObject URLLink where
     annotationToGlobalCoordinates (URLLink a r b c) = do
         gr <- transformAnnotRect r
         return $ URLLink a gr b c
-        
+
 instance PdfObject PDFLink where
-    toPDF a@(PDFLink _ _ page x y border) = toPDF . PDFDictionary . M.fromList $ 
-               standardAnnotationDict a ++ 
+    toPDF a@(PDFLink _ _ page x y border) = toPDF . PDFDictionary . M.fromList $
+               standardAnnotationDict a ++
                 [(PDFName "Dest",AnyPdfObject dest)
                 ,(PDFName "Border",AnyPdfObject . map AnyPdfObject $ (getBorder border))]
      where
@@ -162,8 +162,8 @@ instance PdfObject PDFLink where
                  , AnyPdfObject (PDFName "XYZ")
                  , AnyPdfObject x
                  , AnyPdfObject y
-                 , AnyPdfObject (PDFInteger 0)] 
-                                                        
+                 , AnyPdfObject (PDFInteger 0)]
+
 instance PdfLengthInfo PDFLink where
 
 instance AnnotationObject PDFLink where
@@ -174,13 +174,13 @@ instance AnnotationObject PDFLink where
     annotationToGlobalCoordinates (PDFLink a r b c d e) = do
         gr <- transformAnnotRect r
         return $ PDFLink a gr b c d e
-        
+
 transformAnnotRect :: [PDFFloat] -> Draw [PDFFloat]
 transformAnnotRect r = do
     l <- gets matrix
     let m = foldr (*) identity l
     return $ m `applyMatrixToRectangle` r
-    
+
 -- | Create a new annotation object
 newAnnotation :: (PdfObject a, AnnotationObject a) => a -> Draw ()
 newAnnotation annot = do
