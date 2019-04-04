@@ -17,6 +17,8 @@ module Graphics.PDF.Annotation(
    , URLLink(..)
    , PDFLink(..)
    , TextIcon(..)
+   , TextMarkup(..)
+   , MarkupType(..)
    -- ** Functions
    , newAnnotation
    , toAsciiString
@@ -42,16 +44,27 @@ data TextIcon = Note
               | Insert
               deriving(Eq,Show)
 
+data MarkupType = Highlight | Squiggle | Underline
+
+data TextMarkup = TextMarkup { -- PDF 1.3
+  tmContent :: T.Text, -- Content
+  tmMarkup :: MarkupType,
+  tmRect :: [PDFFloat], -- Rect
+  tmColor :: Color,
+  tmQuads :: [[PDFFloat]] -- Quadpoints
+}
 
 data TextAnnotation = TextAnnotation
    T.Text -- Content
    [PDFFloat] -- Rect
    TextIcon
+
 data URLLink = URLLink
   T.Text -- Content
   [PDFFloat] -- Rect
   URI -- URL
   Bool -- Border
+
 data PDFLink = PDFLink
   T.Text -- Content
   [PDFFloat] -- Rect
@@ -68,6 +81,20 @@ data PDFLink = PDFLink
 --inverse m@(Matrix a b c d e f) = (Matrix (d/de) (-b/de) (-c/de) (a/de) 0 0) * (Matrix 1 0 0 1 (-e) (-f))
 --	where
 --		de = det m
+
+applyMatrixToQuadPoints :: Matrix -> [PDFFloat] -> [PDFFloat]
+applyMatrixToQuadPoints m quad = -- [xa, ya, xb, yb, xc, yc, xd, yd] =
+  let
+    slicePairs (x0:x1:xs) = (x0, x1) : slicePairs xs
+    slicePairs [] = []
+    slicePairs _ = error "odd number of elements"
+
+    catPairs [] = []
+    catPairs ((x,y):xys) = x:y:catPairs xys
+
+    applyTo (Matrix a b c d e f) (x,y) = (a*x+c*y+e,b*x+d*y+f)
+
+  in catPairs $ (applyTo m) <$> slicePairs quad
 
 applyMatrixToRectangle :: Matrix -> [PDFFloat] -> [PDFFloat]
 applyMatrixToRectangle m [xa,ya,xb,yb] =
@@ -118,6 +145,30 @@ standardAnnotationDict a = [(PDFName "Type",AnyPdfObject . PDFName $ "Annot")
 --  annotationType _ = PDFName "Screen"
 --  annotationContent (Screen _ s _ _ _ _) = s
 --  annotationRect (Screen _ _ r _ _ _) = r
+
+instance PdfObject TextMarkup where
+  toPDF a = toPDF . PDFDictionary . M.fromList $
+    standardAnnotationDict a ++ [
+    (PDFName "QuadPoints", AnyPdfObject . map AnyPdfObject $ tmQuads a),
+    (PDFName "Color", AnyPdfObject $ tmColor a)
+    ]
+
+instance PdfLengthInfo TextMarkup where
+
+instance AnnotationObject TextMarkup where
+  addAnnotation = addObject
+  annotationType a = case tmMarkup a of
+    Highlight -> PDFName "Highlight"
+    Squiggle -> PDFName "Squiggly"
+    Underline -> PDFName "Underline"
+  annotationContent a = AnyPdfObject (toPDFString (tmContent a))
+  annotationRect = tmRect
+  annotationToGlobalCoordinates a = do
+    gr <- transformAnnotRect (tmRect a)
+    gq <- transformAnnotQuads (tmQuads a)
+    return $ a {tmRect = gr, tmQuads = gq}
+
+
 
 instance PdfObject TextAnnotation where
       toPDF a@(TextAnnotation _ _ i) = toPDF . PDFDictionary . M.fromList $
@@ -174,6 +225,12 @@ instance AnnotationObject PDFLink where
     annotationToGlobalCoordinates (PDFLink a r b c d e) = do
         gr <- transformAnnotRect r
         return $ PDFLink a gr b c d e
+
+transformAnnotQuads :: [[PDFFloat]] -> Draw [[PDFFloat]]
+transformAnnotQuads r = do
+  l <- gets matrix
+  let m = foldr (*) identity l
+  return $ (applyMatrixToQuadPoints m) <$> r
 
 transformAnnotRect :: [PDFFloat] -> Draw [PDFFloat]
 transformAnnotRect r = do
