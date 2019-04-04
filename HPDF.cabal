@@ -20,7 +20,6 @@ extra-source-files:
   Test/Makefile
   Test/Penrose.hs
   Test/test.hs
-  README.txt
   NEWS.txt
   TODO.txt
   changelog
