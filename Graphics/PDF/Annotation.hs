@@ -51,6 +51,8 @@ data TextMarkup = TextMarkup { -- PDF 1.3
   tmMarkup :: MarkupType,
   tmRect :: [PDFFloat], -- Rect
   tmColor :: Color,
+  tmColorAlpha :: PDFFloat,
+  tmFlag :: PDFInteger,
   tmQuads :: [[PDFFloat]] -- Quadpoints
 }
 
@@ -150,7 +152,9 @@ instance PdfObject TextMarkup where
   toPDF a = toPDF . PDFDictionary . M.fromList $
     standardAnnotationDict a ++ [
     (PDFName "QuadPoints", AnyPdfObject . map AnyPdfObject $ concat $ tmQuads a),
-    (PDFName "Color", AnyPdfObject $ tmColor a)
+    (PDFName "C", AnyPdfObject $ tmColor a),
+    (PDFName "CA", AnyPdfObject $ tmColorAlpha a),
+    (PDFName "F", AnyPdfObject $ tmFlag a)
     ]
 
 instance PdfLengthInfo TextMarkup where
