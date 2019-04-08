@@ -149,7 +149,7 @@ standardAnnotationDict a = [(PDFName "Type",AnyPdfObject . PDFName $ "Annot")
 instance PdfObject TextMarkup where
   toPDF a = toPDF . PDFDictionary . M.fromList $
     standardAnnotationDict a ++ [
-    -- (PDFName "QuadPoints", AnyPdfObject . map AnyPdfObject $ concat $ tmQuads a),
+    (PDFName "QuadPoints", AnyPdfObject . map AnyPdfObject $ concat $ tmQuads a),
     (PDFName "Color", AnyPdfObject $ tmColor a)
     ]
 
