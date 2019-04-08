@@ -85,21 +85,16 @@ data PDFLink = PDFLink
 applyMatrixToQuadPoints :: Matrix -> [PDFFloat] -> [PDFFloat]
 applyMatrixToQuadPoints m quad = -- [xa, ya, xb, yb, xc, yc, xd, yd] =
   let
-    [( xa, ya ), ( xb, yb ), ( xc, yc ), ( xd, yd )] = applyTo m <$> slicePairs quad
-    xs = [xa, xb, xc, xd]
-    ys = [ya, yb, yc, yd]
-    llx = minimum xs
-    lly = minimum ys
-    urx = maximum xs
-    ury = maximum ys
-
     slicePairs (x0:x1:xs) = (x0, x1) : slicePairs xs
     slicePairs [] = []
-    slicePairs _ = error "odd number of elements in quadpoints"
+    slicePairs _ = error "odd number of elements"
+
+    catPairs [] = []
+    catPairs ((x,y):xys) = x:y:catPairs xys
 
     applyTo (Matrix a b c d e f) (x,y) = (a*x+c*y+e,b*x+d*y+f)
-  in
-    [llx, lly, urx, lly, urx, ury, llx, ury]
+
+  in catPairs $ (applyTo m) <$> slicePairs quad
 
 applyMatrixToRectangle :: Matrix -> [PDFFloat] -> [PDFFloat]
 applyMatrixToRectangle m [xa,ya,xb,yb] =
