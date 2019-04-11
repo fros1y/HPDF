@@ -32,6 +32,7 @@ import           Graphics.PDF.Draw
 import           Graphics.PDF.LowLevel.Types
 import           Graphics.PDF.Pages
 import           Network.URI
+import Data.Maybe (fromMaybe, catMaybes)
 
 --import Debug.Trace
 
@@ -51,8 +52,68 @@ data TextMarkup = TextMarkup { -- PDF 1.3
   tmMarkup :: MarkupType,
   tmRect :: [PDFFloat], -- Rect
   tmColor :: Color,
-  tmQuads :: [[PDFFloat]] -- Quadpoints
+  tmQuads :: [[PDFFloat]], -- Quadpoints
+  tmTitle :: Maybe T.Text -- ""By convention, this entry identifies who added the annotation"
 }
+
+data BorderStyle = BorderStyle {
+  bsWidth :: PDFFloat,
+  bsLine :: Maybe BorderLineStyle,
+  bsDashPattern :: Maybe [PDFFloat]
+                 }
+
+data BorderLineStyle = BorderSolid | BorderDashed | BorderBeveled | BorderInset | BorderUnderline
+
+instance Show BorderLineStyle where
+  show BorderSolid = "S"
+  show BorderDashed = "D"
+  show BorderBeveled = "B"
+  show BorderInset = "I"
+  show BorderUnderline = "U"
+
+data DetailedTextAnnotation = DetailedTextAnnotation {
+  taContent :: T.Text,
+  taIcon :: TextIcon,
+  taRect :: [PDFFloat],
+  taColor :: Maybe Color,
+  taFlags :: Maybe PDFInteger,
+  taBorder :: Maybe BorderStyle,
+  taOpen :: Maybe Bool
+}
+
+buildDictEntry key value = (PDFName key, AnyPdfObject value)
+
+buildBorderStyle :: BorderStyle -> PDFDictionary
+buildBorderStyle bs =
+  let entries = catMaybes [
+        Just (buildDictEntry "Type" (PDFName "Border")),
+        Just (buildDictEntry "W" (bsWidth bs)),
+        buildDictEntry "S" . PDFName . show <$> (bsLine bs),
+        buildDictEntry "D" <$> (bsDashPattern bs)]
+  in PDFDictionary . M.fromList $ entries
+
+instance PdfObject DetailedTextAnnotation where
+      toPDF a = toPDF . PDFDictionary . M.fromList $
+        let newEntries = catMaybes [
+              Just (PDFName "Name",AnyPdfObject . PDFName $ show (taIcon a)),
+              buildDictEntry "F" <$> (taFlags a),
+              buildDictEntry "C" <$> (taColor a),
+              buildDictEntry "BS" . buildBorderStyle <$> (taBorder a),
+              buildDictEntry "Open" <$> (taOpen a)]
+        in standardAnnotationDict a ++ newEntries
+
+instance PdfLengthInfo DetailedTextAnnotation where
+
+instance AnnotationObject DetailedTextAnnotation where
+    addAnnotation = addObject
+    annotationType _ = PDFName "Text"
+    annotationContent a = AnyPdfObject (toPDFString (taContent a))
+    annotationRect a = (taRect a)
+    annotationToGlobalCoordinates a = do
+        gr <- transformAnnotRect (taRect a)
+        return $ a {taRect=gr}
+
+
 
 data TextAnnotation = TextAnnotation
    T.Text -- Content
