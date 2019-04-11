@@ -14,6 +14,9 @@ module Graphics.PDF.Annotation(
    -- * Annotations
    -- ** Types
      TextAnnotation(..)
+   , DetailedTextAnnotation(..)
+   , BorderStyle(..)
+   , BorderLineStyle(..)
    , URLLink(..)
    , PDFLink(..)
    , TextIcon(..)
