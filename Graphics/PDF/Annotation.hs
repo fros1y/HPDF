@@ -52,8 +52,9 @@ data TextMarkup = TextMarkup { -- PDF 1.3
   tmMarkup :: MarkupType,
   tmRect :: [PDFFloat], -- Rect
   tmColor :: Color,
-  tmQuads :: [[PDFFloat]], -- Quadpoints
-  tmTitle :: Maybe T.Text -- ""By convention, this entry identifies who added the annotation"
+  tmColorAlpha :: PDFFloat,
+  tmFlag :: PDFInteger,
+  tmQuads :: [[PDFFloat]] -- Quadpoints
 }
 
 data BorderStyle = BorderStyle {
@@ -210,8 +211,10 @@ standardAnnotationDict a = [(PDFName "Type",AnyPdfObject . PDFName $ "Annot")
 instance PdfObject TextMarkup where
   toPDF a = toPDF . PDFDictionary . M.fromList $
     standardAnnotationDict a ++ [
-    (PDFName "QuadPoints", AnyPdfObject . map AnyPdfObject $ tmQuads a),
-    (PDFName "Color", AnyPdfObject $ tmColor a)
+    (PDFName "QuadPoints", AnyPdfObject . map AnyPdfObject $ concat $ tmQuads a),
+    (PDFName "C", AnyPdfObject $ tmColor a),
+    (PDFName "CA", AnyPdfObject $ tmColorAlpha a),
+    (PDFName "F", AnyPdfObject $ tmFlag a)
     ]
 
 instance PdfLengthInfo TextMarkup where
