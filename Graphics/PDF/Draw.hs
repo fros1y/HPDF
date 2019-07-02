@@ -251,10 +251,13 @@ pdfDictMember k (PDFDictionary d)  = M.member k d
 -- | Get a new resource name
 supplyName :: Draw String
 supplyName = do
-    (x:xs) <- gets supplyNames
-    modifyStrict $ \s -> s {supplyNames = xs}
-    return x
-    
+    supply <- gets supplyNames
+    case supply of
+      (x:xs) -> do
+        modifyStrict $ \s -> s {supplyNames = xs}
+        return x
+      _ -> error "Supply exhausted"
+
 emptyDrawState :: Int -> DrawState
 emptyDrawState ref = 
     let names = (map (("O" ++ (show ref)) ++ ) $ [replicate k ['a'..'z'] | k <- [1..]] >>= sequence) in

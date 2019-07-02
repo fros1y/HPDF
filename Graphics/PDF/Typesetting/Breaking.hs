@@ -403,7 +403,7 @@ getNewActiveBreakpoints settings sndPass fmaxw actives z =
                                       -- We keep only the best new break
                                       (Map.insertWith updateBreak (position z,line+1,f') (b' {demerit = d',fitnessValue = f', ratio = r}) newbreak ,newmap)
         in
-        let (breaks',actives') = Map.foldWithKey analyzeActive (Map.empty,actives) actives
+        let (breaks',actives') = Map.foldrWithKey analyzeActive (Map.empty,actives) actives
             dmin = minimum . map demerit . Map.elems $ breaks'
             nbreaks = Map.filter (\x -> demerit x < dmin + (fitness_demerit settings)) breaks'
         in
